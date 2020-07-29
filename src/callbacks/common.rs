@@ -6,6 +6,16 @@ use crate::blockchain::proto::Hashed;
 use crate::blockchain::proto::ToRaw;
 use crate::common::utils;
 
+
+#[derive(Default)]
+pub struct Features {
+    pub created_block_height: u64,
+    pub spent_block_height: u64,
+    pub life: u64,
+    pub value: u64,
+    pub address: String,
+}
+
 pub struct UnspentValue {
     pub block_height: u64,
     pub value: u64,
@@ -27,8 +37,57 @@ pub fn remove_unspents(
     tx.value.in_count.value
 }
 
+pub fn spend_utxos(
+    tx: &Hashed<EvaluatedTx>,
+    block_height: u64,
+    utxos: &mut HashMap<Vec<u8>, Features>,
+) -> u64 {
+    for input in &tx.value.inputs {
+        let key = input.outpoint.to_bytes();
+        if utxos.contains_key(&key) {
+	    let mut features = utxos.entry(key).or_insert(Default::default());
+	    features.spent_block_height = block_height;
+	    features.life = block_height - features.created_block_height;
+        }
+    }
+    tx.value.in_count.value
+}
+
 /// Iterates over transaction outputs and adds valid unspents to HashMap.
 /// Returns the total number of valid outputs.
+pub fn create_utxos(
+    tx: &Hashed<EvaluatedTx>,
+    block_height: u64,
+    utxos: &mut HashMap<Vec<u8>, Features>,
+) -> u64 {
+    let mut count = 0;
+    for (i, output) in tx.value.outputs.iter().enumerate() {
+        match &output.script.address {
+            Some(address) => {
+                let features = Features {
+		    created_block_height: block_height,
+		    spent_block_height: 0,
+                    life: 0,
+                    address: address.clone(),
+                    value: output.out.value,
+                };
+
+                let key = TxOutpoint::new(tx.hash, i as u32).to_bytes();
+                utxos.insert(key, features);
+                count += 1;
+            }
+            None => {
+                debug!(
+                    target: "callback", "Ignoring invalid utxo in: {} ({})",
+                    utils::arr_to_hex_swapped(&tx.hash),
+                    output.script.pattern
+                );
+            }
+        }
+    }
+    count
+}
+
 pub fn insert_unspents(
     tx: &Hashed<EvaluatedTx>,
     block_height: u64,

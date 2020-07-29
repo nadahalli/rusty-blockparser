@@ -12,6 +12,7 @@ use crate::callbacks::balances::Balances;
 use crate::callbacks::csvdump::CsvDump;
 use crate::callbacks::stats::SimpleStats;
 use crate::callbacks::unspentcsvdump::UnspentCsvDump;
+use crate::callbacks::featurecsvdump::FeatureCsvDump;
 use crate::callbacks::Callback;
 use crate::common::logger::SimpleLogger;
 use crate::common::utils;
@@ -168,6 +169,7 @@ fn parse_args() -> OpResult<RefCell<ParserOptions>> {
         .subcommand(CsvDump::build_subcommand())
         .subcommand(SimpleStats::build_subcommand())
         .subcommand(Balances::build_subcommand())
+	.subcommand(FeatureCsvDump::build_subcommand())
         .get_matches();
 
     let verify = matches.is_present("verify");
@@ -196,6 +198,8 @@ fn parse_args() -> OpResult<RefCell<ParserOptions>> {
         callback = Box::new(UnspentCsvDump::new(matches)?);
     } else if let Some(ref matches) = matches.subcommand_matches("balances") {
         callback = Box::new(Balances::new(matches)?);
+    } else if let Some(ref matches) = matches.subcommand_matches("featurecsvdump") {
+        callback = Box::new(FeatureCsvDump::new(matches)?);
     } else {
         clap::Error {
             message: String::from("error: No Callback specified.\nFor more information try --help"),

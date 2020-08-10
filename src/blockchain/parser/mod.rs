@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use crate::blockchain::proto::block::Block;
 use crate::ParserOptions;
-use errors::OpResult;
+use crate::errors::OpResult;
 
 mod blkfile;
 pub mod chain;

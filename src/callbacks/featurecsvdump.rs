@@ -1,3 +1,5 @@
+use rand::Rng;
+
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{BufWriter, Write};
@@ -71,17 +73,13 @@ impl Callback for FeatureCsvDump {
         Ok(())
     }
 
-    /// For each transaction in the block
-    ///   1. apply input transactions (remove (TxID == prevTxIDOut and prevOutID == spentOutID))
-    ///   2. apply output transactions (add (TxID + curOutID -> HashMapVal))
-    /// For each address, retain:
-    ///   * block height as "last modified"
-    ///   * output_val
-    ///   * address
     fn on_block(&mut self, block: &Block, block_height: u64) -> OpResult<()> {
+	let mut rng = rand::thread_rng();
         for tx in &block.txs {
-            self.in_count += common::spend_utxos(&tx, self.start_height + block_height, &mut self.utxos);
-            self.out_count += common::create_utxos(&tx, self.start_height + block_height, &mut self.utxos);
+	    if rng.gen_range(0, 1000) == 1 {
+		self.in_count += common::spend_utxos(&tx, self.start_height + block_height, &mut self.utxos);
+		self.out_count += common::create_utxos(&tx, self.start_height + block_height, &mut self.utxos);
+	    }
         }
         self.tx_count += block.tx_count.value;
         Ok(())

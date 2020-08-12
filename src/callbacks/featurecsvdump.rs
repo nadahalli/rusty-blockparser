@@ -1,5 +1,3 @@
-use rand::Rng;
-
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{BufWriter, Write};
@@ -69,17 +67,14 @@ impl Callback for FeatureCsvDump {
 
     fn on_start(&mut self, _: &CoinType, block_height: u64) -> OpResult<()> {
         self.start_height = block_height;
-        info!(target: "callback", "Using `featurecsvdump` with dump folder: {} ...", &self.dump_folder.display());
+	info!(target: "callback", "Using `featurecsvdump` with dump folder: {} at block_height = {} ...", &self.dump_folder.display(), &self.start_height);
         Ok(())
     }
 
     fn on_block(&mut self, block: &Block, block_height: u64) -> OpResult<()> {
-	let mut rng = rand::thread_rng();
         for tx in &block.txs {
-	    if rng.gen_range(0, 1000) == 1 {
-		self.in_count += common::spend_utxos(&tx, self.start_height + block_height, &mut self.utxos);
-		self.out_count += common::create_utxos(&tx, self.start_height + block_height, &mut self.utxos);
-	    }
+	    self.in_count += common::spend_utxos(&tx, self.start_height + block_height, &mut self.utxos);
+	    self.out_count += common::create_utxos(&tx, self.start_height + block_height, &mut self.utxos);
         }
         self.tx_count += block.tx_count.value;
         Ok(())
@@ -88,8 +83,8 @@ impl Callback for FeatureCsvDump {
     fn on_complete(&mut self, block_height: u64) -> OpResult<()> {
         self.writer.write_all(
             format!(
-                "{};{};{};{};{};{};{}\n",
-                "txid", "indexOut", "created_block_height", "spent_block_height", "value", "life", "address"
+                "{};{};{};{};{};{};{};{}\n",
+                "txid", "indexOut", "created_block_height", "spent_block_height", "life", "value", "fanin", "fanout"
             )
             .as_bytes(),
         )?;
@@ -99,14 +94,15 @@ impl Callback for FeatureCsvDump {
 	    if value.spent_block_height > value.created_block_height {
 		self.writer.write_all(
                     format!(
-			"{};{};{};{};{};{};{}\n",
+			"{};{};{};{};{};{};{};{}\n",
 			utils::arr_to_hex_swapped(txid),
 			index.read_u32::<LittleEndian>()?,
 			value.created_block_height,
 			value.spent_block_height,
 			value.value,
 			value.life,
-			value.address
+			value.fanin,
+			value.fanout,
                     )
 			.as_bytes(),
 		)?;

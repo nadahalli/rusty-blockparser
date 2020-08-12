@@ -65,7 +65,8 @@ impl<'a> BlockchainParser<'a> {
         let coin_type = self.options.borrow().coin_type.clone();
         self.stats.t_started = Instant::now();
         self.stats.t_last_log = Instant::now();
-        (*self.options.borrow_mut().callback).on_start(&coin_type, self.stats.n_height)?;
+	let start = self.options.borrow().range.start;
+	(*self.options.borrow_mut().callback).on_start(&coin_type, start as u64)?;
         trace!(target: "parser", "on_start() called");
         Ok(())
     }
@@ -92,7 +93,8 @@ impl<'a> BlockchainParser<'a> {
               self.stats.n_height, (Instant::now() - self.stats.t_started).as_secs_f32() / 60.0,
               self.blocks_sec());
 
-        (*self.options.borrow_mut().callback).on_complete(self.stats.n_height)?;
+	let start = self.options.borrow().range.start;
+	(*self.options.borrow_mut().callback).on_complete(self.stats.n_height + start as u64)?;
         trace!(target: "parser", "on_complete() called");
         Ok(())
     }

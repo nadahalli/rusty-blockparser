@@ -13,7 +13,8 @@ pub struct Features {
     pub spent_block_height: u64,
     pub life: u64,
     pub value: u64,
-    pub address: String,
+    pub fanin: u64,
+    pub fanout: u64,
 }
 
 pub struct UnspentValue {
@@ -63,13 +64,14 @@ pub fn create_utxos(
     let mut count = 0;
     for (i, output) in tx.value.outputs.iter().enumerate() {
         match &output.script.address {
-            Some(address) => {
+            Some(_address) => {
                 let features = Features {
 		    created_block_height: block_height,
 		    spent_block_height: 0,
                     life: 0,
-                    address: address.clone(),
                     value: output.out.value,
+		    fanin: tx.value.in_count.value,
+		    fanout: tx.value.out_count.value,
                 };
 
                 let key = TxOutpoint::new(tx.hash, i as u32).to_bytes();
